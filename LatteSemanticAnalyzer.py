@@ -54,10 +54,18 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
         # register functions
         self._register_methods(ctx, functions)
         # class can be extended by another class, or not.
-        class_list = ctx.getChildren(predicate=lambda c: isinstance(c, LatteParser.ClassDefContext))
-        extend_class_list = ctx.getChildren(predicate=lambda c: isinstance(c, LatteParser.ClassExtDefContext))
+        class_list = [i for i in ctx.getChildren(predicate=lambda c: isinstance(c, LatteParser.ClassDefContext))]
+        extend_class_list = [c for c in ctx.getChildren(predicate=lambda c: isinstance(c, LatteParser.ClassExtDefContext))]
+        self._defined = False
         for c in class_list:
             self.visit(c)
+        self._defined = True
+        for c in class_list:
+            self.visit(c)
+        self._defined = False
+        for ec in extend_class_list:
+            self.visit(ec)
+        self._defined = True
         for ec in extend_class_list:
             self.visit(ec)
 
@@ -119,7 +127,7 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
         if self.item_current_type not in self.basic_types and self.item_current_type not in self.classes:
             raise UnknownType(ctx)
         # visit every declared variable
-        for item in ctx.item():
+        for item in ctx.getChildren():
             printd(item.getText())
             self.visit(item)
         del self.item_current_type
@@ -251,14 +259,22 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
     # Visit a parse tree produced by LatteParser#ClassDef.
     def visitClassDef(self, ctx: LatteParser.ClassDefContext):
         # this class is not extended by anything, so its extended by our default class
+        printd("inside visitClassDef {}".format(ctx.getText()))
         base_class = ctx.ID().getText()
-        return self._verify_class(ctx, base_class, self.default_super_class)
-
+        print("self._defined is {}".format(self._defined))
+        if self._defined is False:
+            self._add_class_defition(ctx, base_class, self.default_super_class)
+        else:
+            self._verify_class(ctx, base_class)
+        return
     # Visit a parse tree produced by LatteParser#ClassExtDef.
     def visitClassExtDef(self, ctx: LatteParser.ClassExtDefContext):
         classes = ctx.ID()  # List of classes, first is base, second is super
-        return self._verify_class(ctx, classes[0].getText(), classes[1].getText())
-
+        if self._defined is False:
+            self._add_class_defition(ctx, classes[0].getText(), classes[1].getText())
+        else:
+            self._verify_class(ctx, classes[0].getText())
+        return
     # Visit a parse tree produced by LatteParser#classattr.
     def visitClassattr(self, ctx: LatteParser.ClassattrContext):
         # save attributes
@@ -367,12 +383,15 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
 
     # Visit a parse tree produced by LatteParser#EUnOp.
     def visitEUnOp(self, ctx: LatteParser.EUnOpContext):
+        for c in ctx.getChildren():
+            printd(c.getText())
         op, rtype = (self.visit(c) for c in ctx.getChildren())
+        printd("visitng EUnOp, {} {}".format(op.getText(), rtype))
         if rtype == 'int' and type(op) == LatteParser.NegContext:
-            ctx._exprType = 'int'
+            ctx.expr_type = 'int'
             return 'int'
         if rtype == 'boolean' and type(op) == LatteParser.NotContext:
-            ctx._exprType = 'boolean'
+            ctx.expr_type = 'boolean'
             return 'boolean'
         raise UnsupportedOperand(op)
 
@@ -388,7 +407,7 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
 
     # Visit a parse tree produced by LatteParser#EStr.
     def visitEStr(self, ctx: LatteParser.EStrContext):
-        ctx._exprType = 'string'
+        ctx.expr_type = 'string'
         return 'string'
 
     # Visit a parse tree produced by LatteParser#EMulOp.
@@ -404,7 +423,7 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
     def visitEAnd(self, ctx: LatteParser.EAndContext):
         [ltype, op, rtype] = self._get_operators(ctx)
         if ltype == 'boolean':
-            ctx._exprType = ltype
+            ctx.expr_type = ltype
             return ltype
         raise UnsupportedOperand(ctx)
 
@@ -463,8 +482,8 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
 
     # Visit a parse tree produced by LatteParser#EFalse.
     def visitEFalse(self, ctx: LatteParser.EFalseContext):
-        ctx._exprType = 'boolean'
-        return ctx._exprType
+        ctx.expr_type = 'boolean'
+        return ctx.expr_type
 
     # Visit a parse tree produced by LatteParser#EAddOp.
     def visitEAddOp(self, ctx: LatteParser.EAddOpContext):
@@ -580,8 +599,8 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
             else:
                 self.class_methods[self.current_class][name] = (type, arg_types)
 
-    def _verify_class(self, ctx, base_class, super_class):
-        # First check if class was not already defined
+    def _add_class_defition(self, ctx, base_class, super_class):
+        printd("inside add class definition")
         if base_class in self.classes:
             raise MultipleDefinitionsOfClass
         else:
@@ -590,13 +609,15 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
             self.class_attributes[base_class] = {}
             # workaround for 'self'
             self.class_attributes[base_class]['self'] = base_class
-
+            self.current_class = self.default_super_class
+    def _verify_class(self, ctx, base_class):
+            printd("inside class veirification")
             self.current_class = base_class
             methods = [method.fundef() for method in ctx.classfun()]
+            printd("methods: {}".format(methods))
             self._register_methods(ctx, methods)
             self.visitChildren(ctx)
             self.current_class = self.default_super_class
-
     def _find_ident_type(self, ctx, ident):
         printd("inside ident type {}".format(ident))
         if ident in self.block_variables:

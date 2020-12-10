@@ -55,7 +55,8 @@ item
     ;
 
 expr
-    : unOp expr                      # EUnOp
+    : expr '.' expr                 # EFieldAcces
+    | unOp expr                      # EUnOp
     | expr mulOp expr                     # EMulOp
     | expr addOp expr                     # EAddOp
     | expr relOp expr                     # ERelOp
@@ -69,7 +70,6 @@ expr
     | STR                           # EStr
     | '(' expr ')'                  # EParen
     | 'new' ID                      # ENewClass
-    | expr '.' expr                 # EFieldAcces
     | '(' type_ ')' 'null'          # ENullCast
     ;
 

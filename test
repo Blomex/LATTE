@@ -1,27 +1,12 @@
-class foo
-{
-    int a;
-    int b;
+class X{
+
+boolean a(){
+return true;
 }
 
-class bar extends foo
-{
-    string a;
 }
-
-void doSomething(foo f)
-{
-    printInt(f.a);
-}
-
-int main()
-{
-if(true){
+int main(){
+X b = new X;
+boolean bb = b.a();
 return 0;
-}
-else{
-return 1;
-}
-    doSomething(new bar);
-    return 0;
 }
