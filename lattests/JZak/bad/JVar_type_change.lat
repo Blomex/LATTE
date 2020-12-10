@@ -1,0 +1,12 @@
+int main() {
+    string x = "abc";
+    if(true) {
+        int x = 12;
+        x++;
+    }
+    else {
+        int x = 42;
+        x++;
+    }
+    x++;
+}

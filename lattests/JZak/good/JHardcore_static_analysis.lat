@@ -1,0 +1,10 @@
+int main() {
+    if(2 > 1 && 1 + 41 == 40 + 4 - 2) {
+        if("abc" + "def" + "ghi" == "abcde" + "fghi") {
+            if((true || false) && (!true || false || !false)) {
+                return 1;
+            }
+        }
+    }
+        
+}

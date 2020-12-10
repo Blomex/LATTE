@@ -1,0 +1,45 @@
+
+int CheckBoolOr(){
+    if(false || false == true || (true != false)){
+    return 0;
+    }
+}
+
+int main(){
+    if("abc" + "def" == "abcdef"){
+        return 1;
+    }
+    else{
+    }
+}
+
+int CheckBoolRelOp(){
+    if(true == (false != (true == true))){
+        return 0;
+    }
+}
+int CheckBoolRepOp2(){
+    if(false == (true != (true == true))){
+    return 0;
+    }
+}
+
+int CheckBoolAnd(){
+    if(true && (false == false) && (true != false)){
+    return 0;
+    }
+}
+
+int CheckComplexBool(){
+    if (false || true == false || false == true || true != true || false != false){
+    }
+    if(false || true == true && false == false && true != false && false != true ){
+    return 0;
+    }
+}
+
+int CheckWeirdBool(){
+    if(false && false || true && true){
+    return 0;
+    }
+}

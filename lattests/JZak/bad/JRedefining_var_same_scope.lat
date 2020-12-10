@@ -1,0 +1,9 @@
+int main() {
+    int x = 12;
+    {
+        int x = 13;
+        int x = 42;
+    }
+
+    return 0;
+}
