@@ -1,6 +1,8 @@
 import sys
 import os
 from antlr4 import *
+
+from CodeGenerator import CodeGenerator
 from LatteLexer import LatteLexer
 from LatteParser import LatteParser
 from LatteReturnChecker import LatteReturnChecker
@@ -14,8 +16,6 @@ def main(argv):
     # text = InputStream(input(">"))
     if len(argv) == 2:
         file = argv[1]
-        filename, file_extension = os.path.splitext(file)
-        result_file_path = filename + ".j"
         text = FileStream(file)
         lexer = LatteLexer(text)
         stream = CommonTokenStream(lexer)
@@ -25,10 +25,10 @@ def main(argv):
         parser._errHandler = ParserErrorHandler()
         tree = parser.program()
         # need to pass name to visitor, to create class with such name
-        # name = os.path.basename(file)
         try:
             ast = LatteSemanticAnalyzer().visitProgram(tree)
             ast2 = LatteReturnChecker().visitProgram(tree)
+            codegen = CodeGenerator().visitProgram(tree)
             print("OK", file=sys.stdout)
             print(tree.toStringTree(recog=parser))
             return 0
@@ -38,6 +38,7 @@ def main(argv):
             return 1
     else:
         print("Wrong number of arguments. 1 argument expected.")
+        return 1
         # ast = InstantVisitor().visitCompileUnit(tree)
         # value = EvaluateExpressionVisitor().visit(ast)
         # print('=', value)

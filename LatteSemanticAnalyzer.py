@@ -79,6 +79,7 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
                     raise InvalidNumberOfArguments(function)
         if 'main' not in self.class_methods[self.default_super_class]:
             raise MissingMainDeclaration(ctx)
+        ctx.class_methods = self.class_methods
         return
 
     # Visit a parse tree produced by LatteParser#arg.
@@ -115,7 +116,6 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
     # Visit a parse tree produced by LatteParser#Decl.
     def visitDecl(self, ctx: LatteParser.DeclContext):
         printd("inside decl")
-        # TODO FIXUP
         # Get type of decl
         self.item_current_type = ctx.type_().getText()
         # Decl can't be void
@@ -261,7 +261,7 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
         # this class is not extended by anything, so its extended by our default class
         printd("inside visitClassDef {}".format(ctx.getText()))
         base_class = ctx.ID().getText()
-        print("self._defined is {}".format(self._defined))
+        printd("self._defined is {}".format(self._defined))
         if self._defined is False:
             self._add_class_defition(ctx, base_class, self.default_super_class)
         else:
@@ -278,6 +278,7 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
     # Visit a parse tree produced by LatteParser#classattr.
     def visitClassattr(self, ctx: LatteParser.ClassattrContext):
         # save attributes
+        printd("inside class attr")
         type = ctx.type_().getText()
         # can be list of IDS according to grammar
         attributes_ids = [a.getText() for a in ctx.ID()]
@@ -287,8 +288,9 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
             raise UnknownType(ctx)
         else:
             for a in attributes_ids:
-                if a in self.class_attributes:
+                if a in self.class_attributes[self.current_class]:
                     raise MultipleDefinitionsOfVariable(ctx)
+                printd("adding {} to class attributes".format(ctx))
                 self.class_attributes[self.current_class][a] = type
 
     # Visit a parse tree produced by LatteParser#classfun.
@@ -378,7 +380,7 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
 
     # Visit a parse tree produced by LatteParser#EInt.
     def visitEInt(self, ctx: LatteParser.EIntContext):
-        ctx.exprType = 'int'
+        ctx.expr_type = 'int'
         return 'int'
 
     # Visit a parse tree produced by LatteParser#EUnOp.
