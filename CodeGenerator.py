@@ -19,6 +19,7 @@ class CodeGenerator(ParseTreeVisitor):
         self._current_register = 0
         self.class_types = {}
         self.class_attributes = {}
+        self.f = open(file, "w+")
         self.generated_code = []
         self.pre_code = []
         self.class_vars = {}
@@ -47,10 +48,10 @@ class CodeGenerator(ParseTreeVisitor):
             self._generate_function(f.fundef())
         f = open("res.ll", "w+")
         for x in self.pre_code:
-            print(x, file=f)
+            print(x, file=self.f)
         # self._mark_unreachable_code()
         for x in self.generated_code:
-            print(x, file=f)
+            print(x, file=self.f)
 
         # return self.visitChildren(ctx)
 

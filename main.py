@@ -13,9 +13,10 @@ from antlr4.error.ErrorStrategy import BailErrorStrategy
 
 
 def main(argv):
-    # text = InputStream(input(">"))
     if len(argv) == 2:
         file = argv[1]
+        filename, file_extension = os.path.splitext(file)
+        result_file_path = filename + ".ll"
         text = FileStream(file)
         lexer = LatteLexer(text)
         stream = CommonTokenStream(lexer)
@@ -28,7 +29,7 @@ def main(argv):
         try:
             ast = LatteSemanticAnalyzer().visitProgram(tree)
             ast2 = LatteReturnChecker().visitProgram(tree)
-            codegen = CodeGenerator().visitProgram(tree)
+            codegen = CodeGenerator(file=result_file_path).visitProgram(tree)
             print("OK", file=sys.stdout)
             print(tree.toStringTree(recog=parser))
             return 0
@@ -39,9 +40,6 @@ def main(argv):
     else:
         print("Wrong number of arguments. 1 argument expected.")
         return 1
-        # ast = InstantVisitor().visitCompileUnit(tree)
-        # value = EvaluateExpressionVisitor().visit(ast)
-        # print('=', value)
 
 
 if __name__ == '__main__':
