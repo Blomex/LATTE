@@ -7,7 +7,7 @@ int main() {
   printInt(i);
   while (i > 76) {
     i--;
-    printInt(i);
+    printInt(i);//77 pierwszy obrot, potem 76
    // this is a little tricky
    // on the right hand side, i refers to the outer i
    int i = i + 7;

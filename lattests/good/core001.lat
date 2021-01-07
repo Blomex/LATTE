@@ -3,7 +3,7 @@ int main() {
 	printInt(rfac(10));
 	printInt(mfac(10));
         printInt(ifac(10));
-        string r ; // just to test blocks 
+        string r ; // just to test blocks
 	{
 	  int n = 10;
 	  int r = 1;
@@ -61,7 +61,7 @@ int ifac2f(int l, int h) {
         if (l > h)
           return 1;
         int m;
-        m = (l + h);
+        m = (l + h)/2;
         return ifac2f(l,m) * ifac2f(m+1,h);
 }
 
