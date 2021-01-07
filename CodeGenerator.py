@@ -35,7 +35,7 @@ class CodeGenerator(ParseTreeVisitor):
     def visitProgram(self, ctx: LatteParser.ProgramContext):
         # TODO create class types
         self.pre_code.append("declare i8* @malloc(i64)")
-        self.pre_code.append("declare void @error")
+        self.pre_code.append("declare void @error()")
         self.pre_code.append("declare void @printString(i8*)")
         self.pre_code.append("declare void @printInt(i32)")
         self.pre_code.append("declare i32 @readInt()")
