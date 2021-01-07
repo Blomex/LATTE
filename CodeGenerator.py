@@ -46,7 +46,6 @@ class CodeGenerator(ParseTreeVisitor):
         functions = [i for i in ctx.getChildren(predicate=lambda c: isinstance(c, LatteParser.FunTopDefContext))]
         for f in functions:
             self._generate_function(f.fundef())
-        f = open("res.ll", "w+")
         for x in self.pre_code:
             print(x, file=self.f)
         # self._mark_unreachable_code()
