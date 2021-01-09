@@ -1,7 +1,7 @@
 import sys
-import os
+import os.path
 from antlr4 import *
-
+sys.path.append(os.path.dirname(sys.path[0]))
 from src.CodeGenerator import CodeGenerator
 from src.LatteLexer import LatteLexer
 from src.LatteParser import LatteParser
@@ -42,4 +42,5 @@ def main(argv):
 
 
 if __name__ == '__main__':
+    print(sys.path)
     sys.exit(main(sys.argv))
