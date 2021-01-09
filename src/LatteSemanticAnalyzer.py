@@ -4,10 +4,10 @@ from antlr4 import *
 if __name__ is not None and "." in __name__:
     from .LatteParser import LatteParser
 else:
-    from LatteParser import LatteParser
+    from src.LatteParser import LatteParser
 
 from copy import deepcopy
-from CompileTimeErrors import *
+from src.CompileTimeErrors import *
 
 DEBUG = False
 

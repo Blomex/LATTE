@@ -3,7 +3,7 @@ from antlr4 import *
 if __name__ is not None and "." in __name__:
     from .LatteParser import LatteParser
 else:
-    from LatteParser import LatteParser
+    from src.LatteParser import LatteParser
 
 # This class defines a complete listener for a parse tree produced by LatteParser.
 class LatteListener(ParseTreeListener):

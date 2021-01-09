@@ -6,10 +6,10 @@ from antlr4 import *
 if __name__ is not None and "." in __name__:
     from .LatteParser import LatteParser
 else:
-    from LatteParser import LatteParser
+    from src.LatteParser import LatteParser
 import sys
 from copy import deepcopy
-from LatteSemanticAnalyzer import printd
+from src.LatteSemanticAnalyzer import printd
 
 # This class defines a complete generic visitor for a parse tree produced by LatteParser.
 

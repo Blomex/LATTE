@@ -4,9 +4,9 @@ from antlr4 import *
 if __name__ is not None and "." in __name__:
     from .LatteParser import LatteParser
 else:
-    from LatteParser import LatteParser
-from CompileTimeErrors import ReturnUnreachable
-from LatteSemanticAnalyzer import printd
+    from src.LatteParser import LatteParser
+from src.CompileTimeErrors import ReturnUnreachable
+from src.LatteSemanticAnalyzer import printd
 undefined = None
 """
 class checks if return is reachable in every function.

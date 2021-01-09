@@ -2,14 +2,13 @@ import sys
 import os
 from antlr4 import *
 
-from CodeGenerator import CodeGenerator
-from LatteLexer import LatteLexer
-from LatteParser import LatteParser
-from LatteReturnChecker import LatteReturnChecker
-from LatteSemanticAnalyzer import LatteSemanticAnalyzer
-from ParserErrorListener import ParserErrorListener, ParserErrorHandler
-from CompileTimeErrors import CompileException
-from antlr4.error.ErrorStrategy import BailErrorStrategy
+from src.CodeGenerator import CodeGenerator
+from src.LatteLexer import LatteLexer
+from src.LatteParser import LatteParser
+from src.LatteReturnChecker import LatteReturnChecker
+from src.LatteSemanticAnalyzer import LatteSemanticAnalyzer
+from src.ParserErrorListener import ParserErrorListener, ParserErrorHandler
+from src.CompileTimeErrors import CompileException
 
 
 def main(argv):

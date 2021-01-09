@@ -1,9 +1,8 @@
-import sys
 from os import listdir
 from os.path import isfile, join
 import sys
 import time
-from main import main
+from src.main import main
 good = sys.argv[1]
 bad = sys.argv[2]
 files = [join(good, f) for f in listdir(good) if isfile(join(good, f))]
