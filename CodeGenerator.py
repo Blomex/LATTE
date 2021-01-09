@@ -9,7 +9,7 @@ else:
     from LatteParser import LatteParser
 import sys
 from copy import deepcopy
-
+from LatteSemanticAnalyzer import printd
 
 # This class defines a complete generic visitor for a parse tree produced by LatteParser.
 
@@ -29,11 +29,6 @@ class CodeGenerator(ParseTreeVisitor):
         self.strings = {}
         self.inheritance = {}
         self.strings[""] = "@emptystr"
-        self.pre_code.append("@emptystr = private unnamed_addr constant [1 x i8] c\"\\00\"")
-
-    # Visit a parse tree produced by LatteParser#program.
-    def visitProgram(self, ctx: LatteParser.ProgramContext):
-        # TODO create class types
         self.pre_code.append("declare i8* @malloc(i64)")
         self.pre_code.append("declare void @error()")
         self.pre_code.append("declare void @printString(i8*)")
@@ -41,14 +36,18 @@ class CodeGenerator(ParseTreeVisitor):
         self.pre_code.append("declare i32 @readInt()")
         self.pre_code.append("declare i8* @readString()")
         self.pre_code.append("declare i8* @concat(i8*, i8*)")
+        self.pre_code.append("")
+        self.pre_code.append("@emptystr = private unnamed_addr constant [1 x i8] c\"\\00\"")
 
+    # Visit a parse tree produced by LatteParser#program.
+    def visitProgram(self, ctx: LatteParser.ProgramContext):
         self.class_methods = ctx.class_methods
         class_list = [i for i in ctx.getChildren(predicate=lambda c: isinstance(c, LatteParser.ClassDefContext))]
         extend_class_list = [c for c in
                              ctx.getChildren(predicate=lambda c: isinstance(c, LatteParser.ClassExtDefContext))]
         for i in class_list + extend_class_list:
             self.visit(i)
-        print(self.class_types)
+        printd(self.class_types)
         for k in self.class_types.keys():
             self.pre_code.append("%{} = type {{ {} }}".format(k, ", ".join(self.class_types[k])))
         functions = [i for i in ctx.getChildren(predicate=lambda c: isinstance(c, LatteParser.FunTopDefContext))]
@@ -56,7 +55,6 @@ class CodeGenerator(ParseTreeVisitor):
             self._generate_function(f.fundef())
         for x in self.pre_code:
             print(x, file=self.f)
-        # self._mark_unreachable_code()
         for x in self.generated_code:
             print(x, file=self.f)
 
@@ -74,16 +72,16 @@ class CodeGenerator(ParseTreeVisitor):
         attributes = [(self._getType(i), [x.getText() for x in i.ID()]) for i in attributes]
         attributes_names = [x.ID()[0].getText() for x in
                             ctx.getChildren(predicate=lambda c: isinstance(c, LatteParser.ClassattrContext))]
-        print("attribute names: {}".format(attributes_names))
+        printd("attribute names: {}".format(attributes_names))
         self.class_types[clsname] = []
         for i in attributes:
             self.class_types[clsname].extend(repeat(i[0], len(i[1])))
-        print("Class {}, attributes: {}".format(clsname, self.class_types[clsname]))
+        printd("Class {}, attributes: {}".format(clsname, self.class_types[clsname]))
         if clsname not in self.class_attributes:
             self.class_attributes[clsname] = {}
         for i, attr in enumerate(attributes_names):
             self.class_attributes[clsname][attr] = i
-        print(self.class_attributes)
+        printd(self.class_attributes)
         self._generate_code_for_methods(ctx)
         return
 
@@ -100,12 +98,12 @@ class CodeGenerator(ParseTreeVisitor):
         self.class_types[clsname] = self.class_types[baseclsname].copy()
         for i in attributes:
             self.class_types[clsname].extend(repeat(i[0], len(i[1])))
-        print("Extended class {}, attributes: {}".format(clsname, self.class_types[clsname]))
+        printd("Extended class {}, attributes: {}".format(clsname, self.class_types[clsname]))
         if clsname not in self.class_attributes:
             self.class_attributes[clsname] = self.class_attributes[baseclsname].copy()
         for i, attr in enumerate(attributes_names, start=len(self.class_attributes[clsname])):
             self.class_attributes[clsname][attr] = i
-        print("DEBUG {}".format(self.class_attributes))
+        printd("DEBUG {}".format(self.class_attributes))
         self._generate_code_for_methods(ctx)
     # Visit a parse tree produced by LatteParser#classattr.
     def visitClassattr(self, ctx: LatteParser.ClassattrContext):
@@ -117,21 +115,21 @@ class CodeGenerator(ParseTreeVisitor):
 
     # Visit a parse tree produced by LatteParser#FunDef.
     def visitFunDef(self, ctx: LatteParser.FunDefContext):
-        print("inside fundef")
+        printd("inside fundef")
         return self.visitChildren(ctx)
 
     # Visit a parse tree produced by LatteParser#arg.
     def visitArg(self, ctx: LatteParser.ArgContext):
-        print("inside function arg")
+        printd("inside function arg")
         dict = {}
         for i, x in enumerate(ctx.type_()):
             dict[ctx.ID()[i].getText()] = self._getType(x.getText(), True)
-        print(dict)
+        printd(dict)
         return dict
 
     # Visit a parse tree produced by LatteParser#block.
     def visitBlock(self, ctx: LatteParser.BlockContext):
-        print("inside block")
+        printd("inside block")
         previous_vars = deepcopy(self.vars)
         self.visitChildren(ctx)
         self.vars = previous_vars
@@ -147,7 +145,7 @@ class CodeGenerator(ParseTreeVisitor):
     # Visit a parse tree produced by LatteParser#Decl.
     def visitDecl(self, ctx: LatteParser.DeclContext):
         self.declType = self._getType(ctx)
-        print("inside decl")
+        printd("inside decl")
         self.visitChildren(ctx)
         del self.declType
 
@@ -165,7 +163,7 @@ class CodeGenerator(ParseTreeVisitor):
 
     # Visit a parse tree produced by LatteParser#Ret.
     def visitRet(self, ctx: LatteParser.RetContext):
-        result = self.visit(ctx.expr())
+        result = self.get_value(ctx.expr())
         type = self._getType(ctx.expr().expr_type, is_type=True)
         self.generated_code.append("ret {} {}".format(type, result))
 
@@ -260,14 +258,14 @@ class CodeGenerator(ParseTreeVisitor):
 
     # Visit a parse tree produced by LatteParser#item.
     def visitItem(self, ctx: LatteParser.ItemContext):
-        print("inside decl item")
-        print(self.class_types)
+        printd("inside decl item")
+        printd(self.class_types)
         new_reg = self._get_register()
         self.generated_code.append("{} = alloca {type}".format(new_reg, type=self.declType))
         ident = ctx.ID().getText()
         if ident not in self.vars:
             self.vars[ident] = (self.declType, new_reg)
-        print(self.vars)
+        printd(self.vars)
         # only declaration
         if not ctx.expr():
             self.vars[ident] = (self.declType, new_reg)
@@ -288,14 +286,14 @@ class CodeGenerator(ParseTreeVisitor):
             # First generate code for current variables
             result = self.visit(ctx.expr())
             # then replace variable
-            print(self.vars)
+            printd(self.vars)
             self.vars[ident] = (self.declType, new_reg)
             if self.declType in ['i32', 'i1']:
                 self.generated_code.append("store {type} {res}, {type}* {reg}"
                                            .format(type=self.declType, res=result, reg=new_reg))
             elif self.declType == 'i8*':
                 # constant string
-                print(result)
+                printd(result)
                 if result[0] == '@':
                     strlen = len(eval(ctx.expr().getText())) + 1
                     self.generated_code.append(
@@ -314,8 +312,8 @@ class CodeGenerator(ParseTreeVisitor):
 
     # Visit a parse tree produced by LatteParser#EId.
     def visitEId(self, ctx: LatteParser.EIdContext):
-        print("inside Eid")
-        print(self.current_class)
+        printd("inside Eid")
+        printd(self.current_class)
         new_reg = self._get_register()
         ident = ctx.ID().getText()
         if ident in self.vars:
@@ -331,7 +329,7 @@ class CodeGenerator(ParseTreeVisitor):
         #     loadreg = self._get_register()
         #     self.generated_code.append("{} = load {type}, {type}* {clsptr}"
         #                                .format(loadreg, type=clstype, clsptr=clsreg))
-        #     print("loading class: {}".format(self.generated_code[-1]))
+        #     printd("loading class: {}".format(self.generated_code[-1]))
         #     elem_ptr = self._get_register()
         #     self.generated_code.append("{} = getelementptr inbounds {type}, {type}* {reg}, i32 0, i32 {idx}"
         #                                .format(elem_ptr, type=clstype[:-1], reg=loadreg, idx=attribute_idx))
@@ -341,10 +339,11 @@ class CodeGenerator(ParseTreeVisitor):
 
     # Visit a parse tree produced by LatteParser#EFunCall.
     def visitEFunCall(self, ctx: LatteParser.EFunCallContext):
-        print("function call")
-        print(self.class_methods)
+        printd("function call")
+        previous_class = self.current_class
+        printd(self.class_methods)
         name = ctx.ID().getText()
-        print(name, self.current_class)
+        printd(name, self.current_class)
         if self.current_class is None:
             self.current_class = "#latte.lang.object"
         main_class = self.current_class
@@ -353,49 +352,50 @@ class CodeGenerator(ParseTreeVisitor):
         if name in self.class_methods[self.current_class]:
             ret_type, par_types = self.class_methods[self.current_class][name]
         class_argument = ""
-        if main_class != "#latte.lang.object":
-            if main_class != self.current_class:
-                prev = ctx.clsptr
-                ctx.clsptr = self._get_register()
-                self.generated_code.append("{} = bitcast %{}* {} to %{}*"
-                                           .format(ctx.clsptr, main_class,  prev, self.current_class))
+        printd("main class: {}, current class: {}".format(main_class, self.current_class))
+        if main_class != self.current_class and self.current_class != "#latte.lang.object":
+            prev = ctx.clsptr
+            ctx.clsptr = self._get_register()
+            self.generated_code.append("{} = bitcast %{}* {} to %{}*"
+                                       .format(ctx.clsptr, main_class,  prev, self.current_class))
+
+        if self.current_class != "#latte.lang.object":
             class_argument = "%" + self.current_class + "* " + ctx.clsptr
             name = "_" + self.current_class + "_" + name
-        print(self.current_class, name)
-        previous = self.current_class
-        self.current_class = "#latte.lang.object"
+
+        printd(self.current_class, name)
         args = [self.visit(a) for a in ctx.expr()]
-        self.current_class = previous
         type = self._getType(ret_type, True)
         par_types = [self._getType(x, True) for x in par_types]
-        print("name: {}, type: {}, args_types: {} {}".format(name, type, par_types, args))
+        ctx.expr_type = ret_type
+        printd("name: {}, type: {}, args_types: {} {} {}".format(name, type, par_types, args, ctx.expr_type))
         if class_argument != "" and len(par_types) > 0:
             class_argument += ", "
-            print("par_types: {}".format(par_types))
+            printd("par_types: {}".format(par_types))
         for i, ptype in enumerate(par_types):
             if isinstance(ctx.expr()[i], LatteParser.EFieldAccesContext) and ptype in ['i1', 'i32', 'i8*'] \
                     and not isinstance(ctx.expr()[i].expr()[1], LatteParser.EFunCallContext):
                 get_elem = self._get_register()
                 self.generated_code.append("{} = load {}, {}* {}".format(get_elem, ptype, ptype, args[i]))
                 args[i] = get_elem
-        print(args)
-        self.current_class = None
+        printd(args)
+        self.current_class = previous_class
         if type != 'void':
             new_reg = self._get_register()
             self.generated_code.append("{} = call {type} @{name} ({clsarg}{params})"
                                        .format(new_reg, type=type, name=name, clsarg=class_argument,
                                                params=", ".join([par_types[i] + " " + x for i, x in enumerate(args)])))
-            self.current_class = None
-            print("after fun call {}".format(new_reg))
+            self.current_class = previous_class
+            printd("after fun call {}".format(new_reg))
             return new_reg
         self.generated_code.append("call {type} @{name} ({clsarg}{params})"
                                    .format(type=type, name=name, clsarg=class_argument,
                                            params=", ".join([par_types[i] + " " + x for i, x in enumerate(args)])))
-        self.current_class = None
+        self.current_class = previous_class
 
     # Visit a parse tree produced by LatteParser#ERelOp.
     def visitERelOp(self, ctx: LatteParser.ERelOpContext):
-        print("inside rel op")
+        printd("inside rel op")
         op = self.visit(ctx.relOp())
         r1 = self.get_value(ctx.expr()[0])
         r2 = self.get_value(ctx.expr()[1])
@@ -521,7 +521,7 @@ class CodeGenerator(ParseTreeVisitor):
                                    .format(new_reg, malloc_reg, self.declType))
 
         for i, attr_type in enumerate(self.class_types[self.declType[1:-1]]):
-            print("current_attr = {}".format(attr_type))
+            printd("current_attr = {}".format(attr_type))
             current_attribute = self._get_register()
             self.generated_code.append("{} = getelementptr inbounds {t}, {t}* {reg}, i32 0, i32 {idx}"
                                        .format(current_attribute, t=self.declType[:-1], reg=new_reg, idx=i))
@@ -542,7 +542,7 @@ class CodeGenerator(ParseTreeVisitor):
 
     # Visit a parse tree produced by LatteParser#EStr.
     def visitEStr(self, ctx: LatteParser.EStrContext):
-        print("inside EStr")
+        printd("inside EStr")
         string_name = ctx.getText()
         if string_name in self.strings:
             return self._get_constant_string(string_name)
@@ -638,27 +638,38 @@ class CodeGenerator(ParseTreeVisitor):
 
     # Visit a parse tree produced by LatteParser#EFieldAcces.
     def visitEFieldAcces(self, ctx: LatteParser.EFieldAccesContext):
-        print("visiting field access")
-        print(ctx.getText())
-        clsptr = self.visit(ctx.expr()[0])
-        print(self.vars)
+        printd("visiting field access")
+        printd(ctx.getText())
+        printd(self.vars)
         expr = ctx.expr()[1]  # second expression
-        self.current_class, _ = self.vars[ctx.expr()[0].getText()]
-        self.current_class = self.current_class[1:-1]
-        print(self.current_class)
+        printd("START")
+        printd(self.class_methods)
+        printd(self.current_class)
+        printd("STOP")
+        if isinstance(ctx.expr()[0], LatteParser.EIdContext):
+            self.current_class, _ = self.vars[ctx.expr()[0].getText()]
+            self.current_class = self.current_class[1:-1]
+        elif isinstance(ctx.expr()[0], LatteParser.EFunCallContext) and self.current_class is None:
+            self.current_class = "#latte.lang.object"
+            self.current_class, _ = self.class_methods[self.current_class][ctx.expr()[0].ID().getText()]
+            printd("class changed")
+        printd("visiting {}".format(ctx.expr()[0].getText()))
+        clsptr = self.visit(ctx.expr()[0])
+        printd(self.current_class)
+        self.current_class = ctx.expr()[0].expr_type
         # possible access:
         # 1) object.attribute
         # 2) object.method()
         # 3) object.another_object.(1 or 2 or 3)
-        print("class on the left pointer: {}".format(clsptr))
+        printd("class on the left pointer: {}".format(clsptr))
         if isinstance(expr, LatteParser.EIdContext):
             ident = expr.ID().getText()
-            print("class type: {} ident: {}".format(self.current_class, ident))
+            printd("class type: {} ident: {}".format(self.current_class, ident))
             # offset of the element in class
             idx = self.class_attributes[self.current_class][ident]
             # type of the element in class
             attr_type = self.class_types[self.current_class][idx]
-            print("idx and attr: {} {}".format(idx, attr_type))
+            printd("idx and attr: {} {}".format(idx, attr_type))
             elem_ptr = self._get_register()
             self.generated_code.append("{} = getelementptr inbounds {t}, {t}* {reg}, i32 0, i32 {idx}"
                                        .format(elem_ptr, t="%" + self.current_class, reg=clsptr, idx=idx))
@@ -666,15 +677,13 @@ class CodeGenerator(ParseTreeVisitor):
             return elem_ptr
         elif isinstance(expr, LatteParser.EFunCallContext):
             ident = expr.ID().getText()
-            print("method call, type: {} ident: {}".format(self.current_class, ident))
-            print(self.vars)
+            printd("method call, type: {} ident: {}".format(self.current_class, ident))
+            printd(self.vars)
             prev = self.current_class
-            fun_name = "_" + self.current_class + "_" + ident
             expr.clsptr = clsptr
             result = self.visit(expr)
-            print("after efuncallcontext {}".format(result))
+            printd("after efuncallcontext {}".format(result))
             self.current_class = prev
-            self.current_class = None
             return result
 
     # Visit a parse tree produced by LatteParser#EParen.
@@ -687,11 +696,11 @@ class CodeGenerator(ParseTreeVisitor):
 
     # Visit a parse tree produced by LatteParser#EAddOp.
     def visitEAddOp(self, ctx: LatteParser.EAddOpContext):
-        print("inside EAddOp")
+        printd("inside EAddOp")
         r1 = self.get_value(ctx.expr()[0])
         r2 = self.get_value(ctx.expr()[1])
         operator = self.visit(ctx.addOp())
-        print("{} {} ".format(r1, operator))
+        printd("{} {} ".format(r1, operator))
         new_reg = self._get_register()
         if ctx.expr_type == 'int':
             if operator == '+':
@@ -773,20 +782,20 @@ class CodeGenerator(ParseTreeVisitor):
 
     def _generate_code_for_methods(self, ctx):
         methods = [i for i in ctx.getChildren(predicate=lambda c: isinstance(c, LatteParser.ClassfunContext))]
-        print("methods in class: {}", [x.getText() for x in methods])
+        printd("methods in class: {}", [x.getText() for x in methods])
         clsname = ctx.ID() if isinstance(ctx, LatteParser.ClassDefContext) else ctx.ID()[0]
         for x in methods:
             self._generate_class_method(x, clsname.getText())
 
     def _generate_class_method(self, ctx: LatteParser.ClassfunContext, class_name):
-        print("generating code for method {} with class name {}".format(ctx.getText(), class_name))
+        printd("generating code for method {} with class name {}".format(ctx.getText(), class_name))
         fun_name = "_{}_{}".format(class_name, ctx.fundef().ID().getText())
         self.generated_code.append("${} = comdat any".format(fun_name))
         fun: LatteParser.fundef = ctx.fundef()
         fun_type = self._getType(fun)
         arg = fun.arg()
         arguments = self.visit(arg) if arg is not None else {}
-        print(arguments, fun_type)
+        printd(arguments, fun_type)
         first_line = "define {fun_type} @{fun_name}(%{class_name}* %this".format(fun_type=fun_type,
                                                                                  fun_name=fun_name,
                                                                                  class_name=class_name)
@@ -808,7 +817,7 @@ class CodeGenerator(ParseTreeVisitor):
         self.generated_code.append("{} = load {type}, {type}* {cls}"
                                    .format(cls_reg, type="%{}*".format(class_name), cls=new_reg))
         for attr in self.class_attributes[class_name]:
-            print("cls_attr {}".format(attr))
+            printd("cls_attr {}".format(attr))
             new_reg = self._get_register()
             idx = self.class_attributes[class_name][attr]
             att_type = self.class_types[class_name][idx]
@@ -822,7 +831,7 @@ class CodeGenerator(ParseTreeVisitor):
             self.generated_code.append("store {type} {value}, {type}* {ptr}"
                                        .format(type=arguments[k], value="%{}".format(k), ptr=new_reg))
             self.vars[k] = (arguments[k], new_reg)
-        print("vars {}".format(self.vars))
+        printd("vars {}".format(self.vars))
         self.visitChildren(ctx)
         if fun_type == 'void' and 'ret' not in self.generated_code[-1]:
             self.generated_code.append("ret void")
@@ -832,10 +841,10 @@ class CodeGenerator(ParseTreeVisitor):
         # self.current_class = None
 
     def _generate_function(self, ctx: LatteParser.fundef):
-        print("generating code for function")
+        printd("generating code for function")
         name = ctx.ID().getText()
         type = self._getType(ctx)
-        print("name: " + name)
+        printd("name: " + name)
         if ctx.arg():
             args = self.visit(ctx.arg())
         else:
@@ -851,7 +860,7 @@ class CodeGenerator(ParseTreeVisitor):
             self.generated_code.append(
                 "store {type} {value}, {type}* {ptr}".format(type=args[k], value="%{}".format(k), ptr=new_reg))
             self.vars[k] = (args[k], new_reg)
-        print(self.vars)
+        printd(self.vars)
         self.visitChildren(ctx)
         if type == 'void' and 'ret' not in self.generated_code[-1]:
             self.generated_code.append("ret void")
@@ -864,7 +873,7 @@ class CodeGenerator(ParseTreeVisitor):
         return "l{}".format(self.nextLabel)
 
     def _visitAss(self, ctx, op):
-        print("visitass")
+        printd("visitass")
         if op == '=':
             lhs = ctx.expr()[0]
         else:
@@ -900,9 +909,14 @@ class CodeGenerator(ParseTreeVisitor):
                 self.generated_code.append("store i32 {}, i32* {}".format(new_reg, register))
                 return lhs
         elif isinstance(lhs, LatteParser.EFieldAccesContext):
-            print("assigning to class field")
+            printd("assigning to class field")
             ident = lhs.expr()[0].getText()
-            ltype, register = self.vars[ident]
+            if isinstance(lhs.expr()[0], LatteParser.EFunCallContext):
+                ltype = lhs.expr()[0].expr_type
+            elif isinstance(lhs.expr()[0], LatteParser.EIdContext):
+                ltype, register = self.vars[ident]
+            else:
+                ltype = lhs.expr()[0].expr_type
             left_class = self.visit(lhs)
             if op == '++':
                 elem = self._get_register()
@@ -921,7 +935,7 @@ class CodeGenerator(ParseTreeVisitor):
                 rtype = ctx.expr()[1].expr_type
                 self.generated_code.append("store {type} {rhs}, {type}* {lhs}"
                                            .format(rhs=rhs, lhs=left_class, type=self._getType(rtype, True)))
-                print("ltype: {}".format(rtype))
+                printd("ltype: {}".format(rtype))
                 pass
 
         # TODO
@@ -943,19 +957,19 @@ class CodeGenerator(ParseTreeVisitor):
                 self.generated_code.insert(i, "unreachable")
 
     def _get_constant_string(self, cstr):
-        print("get constant string {}".format(cstr))
+        printd("get constant string {}".format(cstr))
         if cstr in self.strings:
-            print("ok")
+            printd("ok")
             label = self.strings[cstr]
             str_len = len(eval(cstr)) + 1
             string_handle = "getelementptr inbounds( [{len} x i8], [{len} x i8]* {label}, i32 0, i32 0)" \
                 .format(len=str_len, label=label)
-            print(string_handle)
+            printd(string_handle)
             return string_handle
 
     def get_value(self, ctx):
         # Returns element by value
-        print("get value")
+        printd("get value")
         # required because field access content returns pointer to element by default.
         if isinstance(ctx, LatteParser.EFieldAccesContext):
             if isinstance(ctx.expr()[1], LatteParser.EFunCallContext):
@@ -967,6 +981,6 @@ class CodeGenerator(ParseTreeVisitor):
             return new_reg
         else:
             result = self.visit(ctx)
-            print("after get_value result {}".format(result))
+            printd("after get_value result {}".format(result))
             return result
             # del LatteParser

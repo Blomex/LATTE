@@ -1,0 +1,8 @@
+uzywane biblioteki: antlr4 i python antlr4 runtime
+
+stan kompilatora: dzialajaca wersja podstawowa, obiekty sa w trakcie implementacji
+
+poniewaz obiekty sa w trakcie implementacji, moga jeszcze nie dzialac, mimo ze frontend je zaakceptuje.
+
+zrodlo runtime.ll: wlasnorecznie skompilowany kod z C przy pomocy http://ellcc.org/demo/index.cgi
+
