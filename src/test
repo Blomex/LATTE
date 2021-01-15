@@ -1,7 +1,0 @@
-class X{}
-class Y extends X{}
-
-int main(){
-X x = new Y;
-return 0;
-}

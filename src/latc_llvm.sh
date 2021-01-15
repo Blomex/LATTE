@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-outfile="${*%.ins}.ll"
-outfile_bc="${*%.ins}.bc"
+outfile="${*%.lat}.ll"
+outfile_bc="${*%.lat}.bc"
 if 
 source env/bin/activate; \
 python3 ./src/main.py "$*";

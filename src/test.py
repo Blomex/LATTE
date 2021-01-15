@@ -25,7 +25,6 @@ for i, file in enumerate(bad_files):
     args[1] = file
     try:
         print("test: {}".format(file), file=sys.stderr)
-        print("test: {}".format(file))
         a = main(args)
         print("return code: {} ".format(a), file=sys.stderr)
     except:

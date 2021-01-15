@@ -1,4 +1,5 @@
 # Generated from Latte.g4 by ANTLR 4.8
+import math
 from itertools import repeat
 
 from antlr4 import *
@@ -103,7 +104,6 @@ class CodeGenerator(ParseTreeVisitor):
             self.class_attributes[clsname] = self.class_attributes[baseclsname].copy()
         for i, attr in enumerate(attributes_names, start=len(self.class_attributes[clsname])):
             self.class_attributes[clsname][attr] = i
-        printd("DEBUG {}".format(self.class_attributes))
         self._generate_code_for_methods(ctx)
     # Visit a parse tree produced by LatteParser#classattr.
     def visitClassattr(self, ctx: LatteParser.ClassattrContext):
@@ -320,7 +320,7 @@ class CodeGenerator(ParseTreeVisitor):
             type, reg = self.vars[ident]
             self.generated_code.append(
                 "{new_reg} = load {type}, {type}* {reg}".format(new_reg=new_reg, type=type, reg=reg))
-            #TODO remove dead code
+
         # else:  # class attribute
         #     class_name = "Point2"
         #     attribute_idx = self.class_attributes[class_name][ident]
@@ -341,7 +341,6 @@ class CodeGenerator(ParseTreeVisitor):
     def visitEFunCall(self, ctx: LatteParser.EFunCallContext):
         printd("function call")
         previous_class = self.current_class
-        printd(self.class_methods)
         name = ctx.ID().getText()
         printd(name, self.current_class)
         if self.current_class is None:
@@ -364,7 +363,7 @@ class CodeGenerator(ParseTreeVisitor):
             name = "_" + self.current_class + "_" + name
 
         printd(self.current_class, name)
-        args = [self.visit(a) for a in ctx.expr()]
+        args = [self.get_value(a) for a in ctx.expr()]
         type = self._getType(ret_type, True)
         par_types = [self._getType(x, True) for x in par_types]
         ctx.expr_type = ret_type
@@ -519,7 +518,6 @@ class CodeGenerator(ParseTreeVisitor):
                                    .format(malloc_reg, offset_size_reg))
         self.generated_code.append("{} = bitcast i8* {} to {}"
                                    .format(new_reg, malloc_reg, self.declType))
-
         for i, attr_type in enumerate(self.class_types[self.declType[1:-1]]):
             printd("current_attr = {}".format(attr_type))
             current_attribute = self._get_register()
@@ -547,10 +545,12 @@ class CodeGenerator(ParseTreeVisitor):
         if string_name in self.strings:
             return self._get_constant_string(string_name)
         else:
+            encoded_string = self.encode_string(string_name)
             str_len = len(eval(string_name)) + 1
             str_label = "@str{}".format(self._get_next_label())
-            self.pre_code.append("{str_label} = private unnamed_addr constant [{str_len} x i8] c\"{str}\\00\""
-                                 .format(str_label=str_label, str=eval(string_name), str_len=str_len))
+            self.pre_code.append("{str_label} = private unnamed_addr constant [{str_len} x i8] {str} "
+                                 .format(str_label=str_label, str=encoded_string, str_len=str_len))
+            #c\"{str}\\00\"
             self.strings[string_name] = str_label
             return self._get_constant_string(string_name)
 
@@ -575,13 +575,20 @@ class CodeGenerator(ParseTreeVisitor):
                 self.generated_code.append("unreachable")
                 return new_reg
             else:
-                return str(int(left) // int(right))
+                left = int(left)
+                right = int(right)
+                result = int(left/right)
+                return str(result)
         if op == '%':
             if self._is_register(left) or self._is_register(right):
                 self.generated_code.append("{} = srem i32 {}, {}".format(new_reg, left, right))
                 return new_reg
-            else:
-                return str(int(left) % int(right))
+            else: #Workaround because python modulo operator always return positive number
+                mod = lambda a, b:  abs(a) % abs(b)*(1, -1)[a < 0]
+                left = int(left)
+                right = int(right)
+                result = mod(left, right)
+                return str(result)
 
     # Visit a parse tree produced by LatteParser#EAnd.
     def visitEAnd(self, ctx: LatteParser.EAndContext):
@@ -638,23 +645,19 @@ class CodeGenerator(ParseTreeVisitor):
 
     # Visit a parse tree produced by LatteParser#EFieldAcces.
     def visitEFieldAcces(self, ctx: LatteParser.EFieldAccesContext):
-        printd("visiting field access")
-        printd(ctx.getText())
-        printd(self.vars)
+        printd("visiting field access {} ".format(ctx.getText()))
+        printd(type(ctx.expr()[0]).__name__)
         expr = ctx.expr()[1]  # second expression
-        printd("START")
-        printd(self.class_methods)
-        printd(self.current_class)
-        printd("STOP")
+        #Left side is class identifier.
         if isinstance(ctx.expr()[0], LatteParser.EIdContext):
-            self.current_class, _ = self.vars[ctx.expr()[0].getText()]
+            self.current_class, reg = self.vars[ctx.expr()[0].getText()]
             self.current_class = self.current_class[1:-1]
         elif isinstance(ctx.expr()[0], LatteParser.EFunCallContext) and self.current_class is None:
             self.current_class = "#latte.lang.object"
             self.current_class, _ = self.class_methods[self.current_class][ctx.expr()[0].ID().getText()]
             printd("class changed")
         printd("visiting {}".format(ctx.expr()[0].getText()))
-        clsptr = self.visit(ctx.expr()[0])
+        clsptr = self.get_value(ctx.expr()[0])
         printd(self.current_class)
         self.current_class = ctx.expr()[0].expr_type
         # possible access:
@@ -671,8 +674,17 @@ class CodeGenerator(ParseTreeVisitor):
             attr_type = self.class_types[self.current_class][idx]
             printd("idx and attr: {} {}".format(idx, attr_type))
             elem_ptr = self._get_register()
+            printd("inside getlemenptr")
+            #res = self.visit(expr)
+            #print("outside, result {}".format(res))
             self.generated_code.append("{} = getelementptr inbounds {t}, {t}* {reg}, i32 0, i32 {idx}"
                                        .format(elem_ptr, t="%" + self.current_class, reg=clsptr, idx=idx))
+            # if attr_type not in ['i1', 'i32', 'i8*']:
+            #     elem = self._get_register()
+            #     self.generated_code.append("{elem} = load {t}, {t}* {clsptr}"
+            #                                .format(elem=elem, t=attr_type, clsptr=elem_ptr))
+            #     return elem
+            printd("DEBUG {}".format(self.generated_code[-1]))
             self.current_class = None
             return elem_ptr
         elif isinstance(expr, LatteParser.EFunCallContext):
@@ -883,7 +895,7 @@ class CodeGenerator(ParseTreeVisitor):
             ltype, register = self.vars[ident]
             if op == '=':
                 self.declType = ltype
-                right = self.visit(ctx.expr()[1])
+                right = self.get_value(ctx.expr()[1])
                 del self.declType
                 expr_res_type = self._getType(ctx.expr()[1].expr_type, True)
                 if expr_res_type != ltype:
@@ -931,10 +943,13 @@ class CodeGenerator(ParseTreeVisitor):
                 self.generated_code.append("{} = add nsw i32 {}, -1".format(new_reg, elem))
                 self.generated_code.append("store i32 {}, i32* {}".format(new_reg, left_class))
             else:  # assignment
-                rhs = self.visit(ctx.expr()[1])
+                self.declType = "%{}*".format(ctx.expr()[1].expr_type)
+                rhs = self.get_value(ctx.expr()[1])
+                del self.declType
                 rtype = ctx.expr()[1].expr_type
                 self.generated_code.append("store {type} {rhs}, {type}* {lhs}"
                                            .format(rhs=rhs, lhs=left_class, type=self._getType(rtype, True)))
+                printd("DEBUG {}".format(self.generated_code[-1]))
                 printd("ltype: {}".format(rtype))
                 pass
 
@@ -961,7 +976,7 @@ class CodeGenerator(ParseTreeVisitor):
         if cstr in self.strings:
             printd("ok")
             label = self.strings[cstr]
-            str_len = len(eval(cstr)) + 1
+            str_len = len(eval(cstr))+1
             string_handle = "getelementptr inbounds( [{len} x i8], [{len} x i8]* {label}, i32 0, i32 0)" \
                 .format(len=str_len, label=label)
             printd(string_handle)
@@ -984,3 +999,9 @@ class CodeGenerator(ParseTreeVisitor):
             printd("after get_value result {}".format(result))
             return result
             # del LatteParser
+    def encode_string(self, s):
+        def to_backhex(c):
+            return "\\" + hex(ord(c))[2:].rjust(2, "0").upper()
+        real_s = eval(s)
+        inner = "".join(map(to_backhex, real_s))
+        return f'c"{inner}\\00"'
