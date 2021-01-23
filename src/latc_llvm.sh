@@ -10,4 +10,5 @@ then
   llvm-as -o ./lib/runtime.bc ./lib/runtime.ll
   llvm-link -o "$outfile_bc" ./lib/runtime.bc out.bc
   rm out.bc
+  chmod u+x "$outfile_bc"
 fi
