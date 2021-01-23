@@ -271,7 +271,6 @@ class CodeGenerator(ParseTreeVisitor):
             self.vars[ident] = (self.declType, new_reg)
             if self.declType in ['i32', 'i1']:
                 self.generated_code.append("store {type} 0, {type}* {reg}".format(type=self.declType, reg=new_reg))
-            # TODO string i klasy
             elif self.declType == 'i8*':
                 strlen = 1
                 self.generated_code.append(
@@ -308,7 +307,6 @@ class CodeGenerator(ParseTreeVisitor):
                 self.generated_code.append("store {type} {result}, {type}* {reg}".format(type=self.declType,result=result, reg=new_reg))
                 return result
 
-            # elif: # TODO STRING I KLASY
 
     # Visit a parse tree produced by LatteParser#EId.
     def visitEId(self, ctx: LatteParser.EIdContext):
@@ -399,7 +397,6 @@ class CodeGenerator(ParseTreeVisitor):
         r1 = self.get_value(ctx.expr()[0])
         r2 = self.get_value(ctx.expr()[1])
         new_register = self._get_register()
-        # TODO can be optimized
         type = self._getType(ctx.expr()[0].expr_type, True)
         if type in ['i1', 'i32']:
             self.generated_code.append(
@@ -501,7 +498,6 @@ class CodeGenerator(ParseTreeVisitor):
                 self.generated_code.append("{} = sub i1 {}, {}".format(new_register, 1, register))
                 return new_register
             else:
-                # TODO check if works
                 return '0' if register == '1' else '1'
 
     # Visit a parse tree produced by LatteParser#ENewClass.
@@ -781,7 +777,6 @@ class CodeGenerator(ParseTreeVisitor):
             type = i
         else:
             type = i.type_().getText()
-        # TODO dopisac pozostale typy
         if type == 'int':
             return 'i32'
         if type == 'boolean':
@@ -952,8 +947,6 @@ class CodeGenerator(ParseTreeVisitor):
                 printd("DEBUG {}".format(self.generated_code[-1]))
                 printd("ltype: {}".format(rtype))
                 pass
-
-        # TODO
 
     def _get_register(self):
         self._current_register += 1
