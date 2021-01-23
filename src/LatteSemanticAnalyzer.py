@@ -480,6 +480,7 @@ class LatteSemanticAnalyzer(ParseTreeVisitor):
     # Visit a parse tree produced by LatteParser#EParen.
     def visitEParen(self, ctx: LatteParser.EParenContext):
         res = self.visit(ctx.expr())
+        ctx.expr_type = res
         return res
 
     # Visit a parse tree produced by LatteParser#EFalse.
